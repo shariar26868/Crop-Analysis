@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agriculture DB Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --border2: #21262d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #3fb950;
+    --accent2: #58a6ff;
+    --accent3: #f0883e;
+    --accent4: #bc8cff;
+    --danger: #f85149;
+    --font-mono: 'Space Mono', monospace;
+    --font-sans: 'DM Sans', sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .shell { display: flex; height: 100vh; overflow: hidden; }
+
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .sidebar-logo .brand {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .sidebar-logo .tagline {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .sidebar-section { padding: 12px 8px 4px; }
+  .sidebar-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0 8px 6px;
+  }
+
+  .table-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .table-btn:hover { background: var(--surface2); color: var(--text); }
+  .table-btn.active { background: rgba(63,185,80,0.12); color: var(--accent); }
+  .table-btn .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .table-btn.active .dot { background: var(--accent); }
+
+  .view-badge {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    background: rgba(88,166,255,0.15);
+    color: var(--accent2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: auto;
+  }
+
+  /* Main content */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar .current-table {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent2);
+  }
+  .topbar .row-count {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .controls {
+    padding: 12px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 340px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 7px 10px 7px 32px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent2); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .limit-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 7px 10px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover { background: var(--surface); border-color: var(--accent2); color: var(--accent2); }
+  .btn.primary { background: rgba(63,185,80,0.15); border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: rgba(63,185,80,0.25); }
+
+  /* Table area */
+  .table-area {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  .data-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .data-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .data-table th:hover { color: var(--text); }
+  .data-table th.sorted { color: var(--accent2); }
+
+  .data-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border2);
+    color: var(--text);
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .data-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .data-table tr:nth-child(even) td { background: rgba(255,255,255,0.01); }
+  .data-table tr:nth-child(even):hover td { background: rgba(255,255,255,0.03); }
+
+  /* Cell type badges */
+  .cell-num {
+    font-family: var(--font-mono);
+    color: var(--accent3);
+    text-align: right;
+  }
+  .cell-id {
+    font-family: var(--font-mono);
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .cell-date {
+    font-family: var(--font-mono);
+    color: var(--accent4);
+    font-size: 11px;
+  }
+  .cell-bool-1 { color: var(--accent); font-family: var(--font-mono); font-size: 11px; }
+  .cell-bool-0 { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .badge-A { background: rgba(63,185,80,0.15); color: var(--accent); }
+  .badge-B { background: rgba(88,166,255,0.15); color: var(--accent2); }
+  .badge-C { background: rgba(240,136,62,0.15); color: var(--accent3); }
+  .badge-D { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .badge-type { background: rgba(188,140,255,0.12); color: var(--accent4); }
+
+  /* Loading/Error states */
+  .state-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 12px;
+    color: var(--muted);
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Statusbar */
+  .statusbar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 20px;
+    display: flex;
+    gap: 20px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .statusbar span b { color: var(--text); }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .page-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent2); color: var(--accent2); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .page-btn.active { background: rgba(88,166,255,0.15); border-color: var(--accent2); color: var(--accent2); }
+
+  /* Config modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: 440px;
+    max-width: 90vw;
+  }
+  .modal h2 {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-family: var(--font-mono);
+  }
+  .form-group input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+  }
+  .form-group input:focus { border-color: var(--accent2); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .err-msg { color: var(--danger); font-size: 12px; margin-top: 10px; font-family: var(--font-mono); display: none; }
+
+  .col-toggle-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .col-chip {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .col-chip.on { background: rgba(88,166,255,0.12); border-color: var(--accent2); color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand">AgriDB</div>
+      <div class="tagline">agriculture_db explorer</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Tables</div>
+      <button class="table-btn" onclick="loadTable('dim_crop')">
+        <span class="dot"></span> dim_crop
+      </button>
+      <button class="table-btn" onclick="loadTable('dim_date')">
+        <span class="dot"></span> dim_date
+      </button>
+      <button class="table-btn" onclick="loadTable('dim_farm')">
+        <span class="dot"></span> dim_farm
+      </button>
+      <button class="table-btn" onclick="loadTable('dim_input_supply')">
+        <span class="dot"></span> dim_input_supply
+      </button>
+      <button class="table-btn" onclick="loadTable('dim_market')">
+        <span class="dot"></span> dim_market
+      </button>
+      <button class="table-btn" onclick="loadTable('fact_harvest_sales')">
+        <span class="dot"></span> fact_harvest_sales
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Views</div>
+      <button class="table-btn" onclick="loadTable('vw_harvest_full')">
+        <span class="dot"></span> vw_harvest_full
+        <span class="view-badge">VIEW</span>
+      </button>
+      <button class="table-btn" onclick="loadTable('vw_farm_profitability')">
+        <span class="dot"></span> vw_farm_profitability
+        <span class="view-badge">VIEW</span>
+      </button>
+      <button class="table-btn" onclick="loadTable('vw_revenue_by_crop_year')">
+        <span class="dot"></span> vw_revenue_by_crop_year
+        <span class="view-badge">VIEW</span>
+      </button>
+    </div>
+
+    <div style="margin-top: auto; padding: 12px; border-top: 1px solid var(--border2);">
+      <button class="btn" onclick="openConfig()" style="width:100%; justify-content:center;">
+        ⚙ DB Config
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <span class="current-table" id="current-table">← Select a table</span>
+      <span class="row-count" id="row-count"></span>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" id="search-input" placeholder="Search rows..." oninput="filterRows()" disabled>
+      </div>
+
+      <select class="limit-select" id="limit-select" onchange="loadTable(currentTable)" disabled>
+        <option value="50">50 rows</option>
+        <option value="100">100 rows</option>
+        <option value="200">200 rows</option>
+        <option value="500">500 rows</option>
+        <option value="99999">All rows</option>
+      </select>
+
+      <button class="btn" id="col-btn" onclick="toggleColPanel()" disabled>Columns</button>
+      <button class="btn primary" id="export-btn" onclick="exportCSV()" disabled>↓ CSV</button>
+    </div>
+
+    <!-- Column toggle panel -->
+    <div id="col-panel" style="display:none; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border2);">
+      <div style="font-size:11px; color:var(--muted); font-family:var(--font-mono); margin-bottom:8px;">Toggle columns</div>
+      <div class="col-toggle-area" id="col-chips"></div>
+    </div>
+
+    <div class="table-area" id="table-area">
+      <div class="state-box">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/>
+        </svg>
+        <span style="font-size:12px; color: var(--muted);">Select a table from the sidebar</span>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span>DB: <b id="stat-db">not connected</b></span>
+      <span>Table: <b id="stat-table">—</b></span>
+      <span>Showing: <b id="stat-showing">—</b></span>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Config Modal -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <h2>// DATABASE CONFIG</h2>
+    <div class="form-group">
+      <label>HOST</label>
+      <input id="cfg-host" value="187.127.158.23">
+    </div>
+    <div class="form-group">
+      <label>PORT</label>
+      <input id="cfg-port" value="3306">
+    </div>
+    <div class="form-group">
+      <label>DATABASE</label>
+      <input id="cfg-db" value="agriculture_db">
+    </div>
+    <div class="form-group">
+      <label>USER</label>
+      <input id="cfg-user" value="guest_user_37297">
+    </div>
+    <div class="form-group">
+      <label>PASSWORD</label>
+      <input id="cfg-pass" type="password" value="mn&&875382!:0">
+    </div>
+    <div class="err-msg" id="cfg-err"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeConfig()">Cancel</button>
+      <button class="btn primary" onclick="saveConfig()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentTable = null;
+let allRows = [];
+let filteredRows = [];
+let visibleCols = [];
+let allCols = [];
+let sortCol = null, sortDir = 1;
+let currentPage = 1;
+const PAGE_SIZE = 100;
+
+let dbConfig = {
+  host: '187.127.158.23',
+  port: 3306,
+  db: 'agriculture_db',
+  user: 'guest_user_37297',
+  pass: 'mn&&875382!:0'
+};
+
+// ── DB fetch via proxy (local Python server) ────────────────────────────────
+// This frontend calls a local FastAPI endpoint /db-query that you run locally
+// The endpoint takes { table, limit } and returns { columns, rows }
+
+async function fetchTable(table, limit) {
+  const url = `http://127.0.0.1:8001/db-query?table=${encodeURIComponent(table)}&limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  return await res.json();
+}
+
+// ── Load Table ─────────────────────────────────────────────────────────────
+async function loadTable(table) {
+  if (!table) return;
+  currentTable = table;
+  currentPage = 1;
+  sortCol = null;
+
+  // Update sidebar active state
+  document.querySelectorAll('.table-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim().startsWith(table));
+  });
+
+  document.getElementById('current-table').textContent = table;
+  document.getElementById('stat-table').textContent = table;
+  document.getElementById('stat-db').textContent = dbConfig.db;
+
+  showLoading();
+
+  const limit = document.getElementById('limit-select').value;
+
+  try {
+    const data = await fetchTable(table, limit);
+    allCols = data.columns;
+    visibleCols = [...allCols];
+    allRows = data.rows;
+    filteredRows = [...allRows];
+
+    renderColChips();
+    renderTable();
+    enableControls();
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+function showLoading() {
+  document.getElementById('table-area').innerHTML = `
+    <div class="state-box">
+      <div class="spinner"></div>
+      <span style="font-size:12px">Loading ${currentTable}...</span>
+    </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('table-area').innerHTML = `
+    <div class="state-box">
+      <span style="color:var(--danger); font-family:var(--font-mono); font-size:12px">✗ ${msg}</span>
+      <span style="font-size:11px; color:var(--muted)">Make sure the local server is running: python server.py</span>
+    </div>`;
+}
+
+function enableControls() {
+  document.getElementById('search-input').disabled = false;
+  document.getElementById('limit-select').disabled = false;
+  document.getElementById('col-btn').disabled = false;
+  document.getElementById('export-btn').disabled = false;
+}
+
+// ── Render Table ───────────────────────────────────────────────────────────
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = filteredRows.slice(start, start + PAGE_SIZE);
+
+  const thead = `<thead><tr>${visibleCols.map(c => {
+    const sorted = c === sortCol ? ' sorted' : '';
+    const arrow = c === sortCol ? (sortDir === 1 ? ' ↑' : ' ↓') : '';
+    return `<th class="${sorted}" onclick="sortBy('${c}')">${c}${arrow}</th>`;
+  }).join('')}</tr></thead>`;
+
+  const tbody = `<tbody>${pageRows.map(row => {
+    const cells = visibleCols.map(col => {
+      const val = row[col];
+      return `<td>${formatCell(col, val)}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('')}</tbody>`;
+
+  document.getElementById('table-area').innerHTML =
+    `<table class="data-table">${thead}${tbody}</table>`;
+
+  const total = filteredRows.length;
+  const showing = Math.min(start + PAGE_SIZE, total);
+  document.getElementById('row-count').textContent = `${total.toLocaleString()} rows`;
+  document.getElementById('stat-showing').textContent = `${start + 1}–${showing} of ${total}`;
+
+  renderPagination();
+}
+
+function formatCell(col, val) {
+  if (val === null || val === undefined || val === '') return `<span style="color:var(--muted);font-size:10px">null</span>`;
+
+  const c = col.toLowerCase();
+
+  // Boolean
+  if (c === 'is_organic') return val == 1
+    ? `<span class="cell-bool-1">✓ organic</span>`
+    : `<span class="cell-bool-0">✗ conventional</span>`;
+
+  // Quality grade badge
+  if (c === 'quality_grade') return `<span class="badge badge-${val}">${val}</span>`;
+
+  // Enum-like type fields
+  if (['farm_type','crop_category','market_type','supply_type','growing_season','season','price_tier','pesticide_residue','water_requirement'].includes(c)) {
+    return `<span class="badge badge-type">${val}</span>`;
+  }
+
+  // Date
+  if (c === 'full_date' || c.includes('date')) return `<span class="cell-date">${val}</span>`;
+
+  // ID
+  if (c.endsWith('_id') || c === 'harvest_id') return `<span class="cell-id">#${val}</span>`;
+
+  // Numbers
+  if (typeof val === 'number') {
+    if (c.includes('bdt')) return `<span class="cell-num">৳${val.toLocaleString()}</span>`;
+    if (c.includes('pct') || c.includes('pct')) return `<span class="cell-num">${val}%</span>`;
+    if (c.includes('ha') || c.includes('ton')) return `<span class="cell-num">${val}</span>`;
+    return `<span class="cell-num">${val.toLocaleString()}</span>`;
+  }
+
+  return String(val);
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  currentPage = 1;
+
+  filteredRows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+  renderTable();
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+function filterRows() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  currentPage = 1;
+  if (!q) { filteredRows = [...allRows]; }
+  else {
+    filteredRows = allRows.filter(row =>
+      Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(q))
+    );
+  }
+  if (sortCol) {
+    filteredRows.sort((a, b) => {
+      const av = a[sortCol], bv = b[sortCol];
+      if (av == null) return 1; if (bv == null) return -1;
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+  }
+  renderTable();
+}
+
+// ── Pagination ─────────────────────────────────────────────────────────────
+function renderPagination() {
+  const total = filteredRows.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  const range = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - currentPage) <= 1) range.push(i);
+    else if (range[range.length-1] !== '…') range.push('…');
+  }
+  range.forEach(p => {
+    if (p === '…') html += `<span class="page-btn" style="cursor:default">…</span>`;
+    else html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) {
+  const pages = Math.ceil(filteredRows.length / PAGE_SIZE);
+  if (p < 1 || p > pages) return;
+  currentPage = p;
+  renderTable();
+  document.querySelector('.table-area').scrollTop = 0;
+}
+
+// ── Column Toggle ──────────────────────────────────────────────────────────
+let colPanelOpen = false;
+function toggleColPanel() {
+  colPanelOpen = !colPanelOpen;
+  document.getElementById('col-panel').style.display = colPanelOpen ? 'block' : 'none';
+}
+
+function renderColChips() {
+  document.getElementById('col-chips').innerHTML = allCols.map(c =>
+    `<div class="col-chip on" data-col="${c}" onclick="toggleCol(this)">${c}</div>`
+  ).join('');
+  visibleCols = [...allCols];
+}
+
+function toggleCol(el) {
+  el.classList.toggle('on');
+  visibleCols = [...document.querySelectorAll('.col-chip.on')].map(e => e.dataset.col);
+  currentPage = 1;
+  renderTable();
+}
+
+// ── Export CSV ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  const header = visibleCols.join(',');
+  const rows = filteredRows.map(r =>
+    visibleCols.map(c => {
+      const v = r[c];
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(',')
+  );
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${currentTable}_export.csv`;
+  a.click();
+}
+
+// ── Config Modal ───────────────────────────────────────────────────────────
+function openConfig() { document.getElementById('config-modal').classList.add('open'); }
+function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
+function saveConfig() {
+  dbConfig = {
+    host: document.getElementById('cfg-host').value,
+    port: parseInt(document.getElementById('cfg-port').value),
+    db: document.getElementById('cfg-db').value,
+    user: document.getElementById('cfg-user').value,
+    pass: document.getElementById('cfg-pass').value,
+  };
+  closeConfig();
+  if (currentTable) loadTable(currentTable);
+}
+
+// close modal on overlay click
+document.getElementById('config-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfig();
+});
+</script>
+</body>
+</html>
