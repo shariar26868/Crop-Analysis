@@ -55,10 +55,18 @@ PORT=3306
 DB=agriculture_db
 USER=<db_user>
 PASSWORD=<db_password>
+ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+RATE_LIMIT=60 per minute
+APP_ENV=development
 SECRET_KEY=your_secret_key
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ADMIN_USER=admin
 ADMIN_PASS=adminpass
 REDIS_URL=redis://localhost:6379/0
+CACHE_DEFAULT_EXPIRE=120
+PRIME_CACHE_INTERVAL=600
+LOG_LEVEL=INFO
+API_URL=http://localhost:8000
 ```
 
 ### 4. Run the API server
