@@ -10,13 +10,9 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379/0
-
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-
   worker:
     build: .
     command: celery -A app.celery_app.celery worker --loglevel=info
@@ -29,7 +25,6 @@ services:
       - api
       - redis
     restart: unless-stopped
-
   beat:
     build: .
     command: celery -A app.celery_app.celery beat --loglevel=info
