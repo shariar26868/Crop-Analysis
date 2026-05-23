@@ -67,6 +67,12 @@ REDIS_URL=redis://localhost:6379/0
 python main.py
 ```
 
+Or using Uvicorn directly (with auto-reload for development):
+
+```bash
+uvicorn main:app --reload
+```
+
 The API will be available at:
 - **API:** `http://localhost:8000`
 - **Swagger Docs:** `http://localhost:8000/docs`
